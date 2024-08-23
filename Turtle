@@ -1,0 +1,293 @@
+/**
+ * 
+ * In this project, I was tasked with implementing a simplified version of the turtle graphics engine.
+ *  My main focus was on creating a linked list of commands to control a virtual pen's movement on a screen.
+ *I also had to develop a function that executes the list of commands to produce an image and implement 
+the logic to interpret and execute these commands to create the desired output.
+ */
+#include "imgUtils.c"
+
+#ifndef SIZEX
+  #define SIZEX 512
+  #define SIZEY 512
+#endif 
+
+typedef struct cmd_node {
+ char cmd [10];
+ int val;
+ struct cmd_node *next;
+} CmdNode;
+
+/*---------------------------------------------------------------------------*/
+
+CmdNode *newCmdNode(char cmd[10], int val) {
+ CmdNode *newnode = (CmdNode *)malloc(sizeof(CmdNode));
+  if(newnode != NULL) {
+    if(strcmp(cmd, "Penup") == 0 ||
+       strcmp(cmd, "Pendown") == 0 ||
+       strcmp(cmd, "Forward") == 0 ||
+       strcmp(cmd, "Backward") == 0 ||
+       strcmp(cmd, "Right") == 0 ||
+       strcmp(cmd, "Left") == 0 ||
+       strcmp(cmd, "Colour") == 0) {
+      strcpy(newnode->cmd, cmd);
+      newnode->val = val;
+      newnode->next = NULL;
+    } else {
+      printf("Invalid command.\\n");
+      free(newnode);
+      return NULL;
+    }
+  }
+  return newnode;
+}
+
+/*---------------------------------------------------------------------------*/
+
+void printCommandList(CmdNode *head) {
+ 
+   CmdNode *node = head;
+  int i = 0;
+  while(node != NULL){
+      if(strcmp(node->cmd, "Forward") == 0 ||
+         strcmp(node->cmd, "Right") == 0 ||
+         strcmp(node->cmd, "Left") == 0) {
+        printf("%3d: %s %d\\n", i, node->cmd, node->val);
+      } else {
+        printf("%3d: %s\\n", i, node->cmd);
+      }
+    }
+    node = node->next;
+    i++;
+
+  return;
+}
+
+/*---------------------------------------------------------------------------*/
+
+void queryByCommand(CmdNode *head, char cmd[10]) {
+  
+   CmdNode *node = head;
+  int i = 0;
+  while(node != NULL){
+    if(strcmp(node->cmd, cmd) == 0) {
+      if(strcmp(node->cmd, "Forward") == 0 ||
+         strcmp(node->cmd, "Right") == 0 ||
+         strcmp(node->cmd, "Left") == 0) {
+        printf("%3d: %s %d\\n", i, node->cmd, node->val);
+      } else {
+        printf("%3d: %s\\n", i, node->cmd);
+      }
+    }
+    node = node->next;
+    i++;
+  }
+  return;
+}
+
+
+/*---------------------------------------------------------------------------*/
+
+int countCommands(CmdNode *head) {
+  
+    int i= 0;
+  CmdNode *current = head;
+  while(current!= NULL) {
+    i++;
+    current = current->next;
+  }
+  return i;
+}
+
+/*---------------------------------------------------------------------------*/
+
+CmdNode *insertCommand(CmdNode *head, CmdNode *new_CmdNode) {
+ 
+   if(head == NULL) {
+    return new_CmdNode;
+  } else {
+    CmdNode *current = head;
+    while(current->next != NULL) {
+      current = current->next;
+    }
+    current->next = new_CmdNode;
+    return head;
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+
+CmdNode *insertCommandBefore(CmdNode *head, CmdNode *new_CmdNode, int cmdNum) {
+
+  if(cmdNum == 0) {
+    new_CmdNode->next = head;
+    return new_CmdNode;
+  } else {
+    CmdNode *current = head;
+    int i = 0;
+    while(current != NULL && i < cmdNum - 1) {
+      current = current->next;
+      i++;
+    }
+    if(current != NULL) {
+      new_CmdNode->next = current->next;
+      current->next = new_CmdNode;
+    } else {
+      printf("Invalid Command Number.\\n");
+    }
+    return head;
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+
+void updateCommand(CmdNode *head, int cmdNum, char cmd[10], int val) {
+  
+   CmdNode *current = head;
+  int i = 0;
+  while(current != NULL && i < cmdNum) {
+    current = current->next;
+    i++;
+  }
+  if(current != NULL) {
+    strcpy(current->cmd, cmd);
+    current->val = val;
+  } else {
+    printf("Invalid Command Number.\\n");
+  }
+  return;
+}
+
+/*---------------------------------------------------------------------------*/
+
+
+CmdNode *deleteCommand(CmdNode *head, int cmdNum) {
+ 
+    int i = 0;
+   if(cmdNum == 0) {
+    CmdNode *nextNode = head->next;
+    free(head);
+    return nextNode;
+  } else {
+    CmdNode *current = head;
+   
+    while(current != NULL && i < cmdNum - 1) {
+      current = current->next;
+      i++;
+    }
+    if(current != NULL && current->next != NULL) {
+      CmdNode *nextNextNode = current->next->next;
+      free(current->next);
+      current->next = nextNextNode;
+    }
+    return head;
+  }
+}
+
+/*---------------------------------------------------------------------------*/
+
+
+CmdNode *deleteCommandList(CmdNode *head) {
+
+   CmdNode *current = head;
+  while(current != NULL) {
+    CmdNode *nextNode = current->next;
+    free(current);
+    current = nextNode;
+  }
+  return NULL;
+}
+
+/*---------------------------------------------------------------------------*/
+
+void run(Image *im, CmdNode *head, int *endX, int *endY) {
+  
+   CmdNode *current = head;
+  int x = 0, y = 0, direction = 0, pen = 1, colour = 0;
+  while(current != NULL) {
+    if(strcmp(current->cmd, "penup") == 0) {
+      pen = 0;
+    } else if(strcmp(current->cmd, "pendown") == 0) {
+      pen = 1;
+    } else if(strcmp(current->cmd, "colour") == 0) {
+      colour = current->val;
+    } else if(strcmp(current->cmd, "forward") == 0) {
+      if(direction == 0) {
+        if(pen == 1) {
+          drawLine(im, x, y, x + current->val, y, colour);
+        }
+        x += current->val;
+        if(x >= SIZEX) {
+          x = SIZEX - 1;
+        }
+      } else if(direction == 1) {
+        if(pen == 1) {
+          drawLine(im, x, y, x, y + current->val, colour);
+        }
+        y += current->val;
+        if(y >= SIZEY) {
+          y = SIZEY - 1;
+        }
+      } else if(direction == 2) {
+        if(pen == 1) {
+          drawLine(im, x, y, x - current->val, y, colour);
+        }
+        x -= current->val;
+        if(x < 0) {
+          x = 0;
+        }
+      } else if(direction == 3) {
+        if(pen == 1) {
+          drawLine(im, x, y, x, y - current->val, colour);
+        }
+        y -= current->val;
+        if(y < 0) {
+          y = 0;
+        }
+      }
+    } else if(strcmp(current->cmd, "backward") == 0) {
+      if(direction == 0) {
+        if(pen == 1) {
+          drawLine(im, x, y, x - current->val, y, colour);
+        }
+        x -= current->val;
+        if(x < 0) {
+          x = 0;
+        }
+      } else if(direction == 1) {
+        if(pen == 1) {
+          drawLine(im, x, y, x, y - current->val, colour);
+        }
+        y -= current->val;
+        if(y < 0) {
+          y = 0;
+        }
+      } else if(direction == 2) {
+        if(pen == 1) {
+          drawLine(im, x, y, x + current->val, y, colour);
+        }
+        x += current->val;
+        if(x >= SIZEX) {
+          x = SIZEX - 1;
+        }
+      } else if(direction == 3) {
+        if(pen == 1) {
+          drawLine(im, x, y, x, y + current->val, colour);
+        }
+        y += current->val;
+        if(y >= SIZEY) {
+          y = SIZEY - 1;
+        }
+      }
+    } else if(strcmp(current->cmd, "right") == 0) {
+      direction = (direction + 1) % 4;
+    } else if(strcmp(current->cmd, "left") == 0) {
+      direction = (direction + 3) % 4;
+    }
+    current = current->next;
+  }
+  *endX = x;
+  *endY = y;
+
+  return;
+}
